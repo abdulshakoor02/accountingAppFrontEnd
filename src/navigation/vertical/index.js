@@ -98,6 +98,32 @@ const navigation = () => {
       ]
     },
     {
+      title: 'Master',
+      icon: DotsHorizontal,
+      children: [
+        {
+          title: 'Tax',
+          path: '/apps/tax'
+        },
+        {
+          title: 'Currency',
+          path: '/apps/currency'
+        },
+        {
+          title: 'Region',
+          path: '/apps/region'
+        },
+        {
+          title: 'Branch',
+          path: '/apps/branch'
+        },
+        {
+          title: 'Designation',
+          path: '/apps/designation'
+        }
+      ]
+    },
+    {
       title: 'Roles & Permissions',
       icon: LockOutline,
       children: [

@@ -1,5 +1,7 @@
 // ** React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+import { useDispatch } from 'react-redux'
 
 // ** MUI Imports
 import Box from '@mui/material/Box'
@@ -28,12 +30,17 @@ import FormHelperText from '@mui/material/FormHelperText'
 import TableContainer from '@mui/material/TableContainer'
 import FormControlLabel from '@mui/material/FormControlLabel'
 
+import toast from 'react-hot-toast'
+
 // ** Third Party Imports
 import { useForm, Controller } from 'react-hook-form'
+
+import { fetchRole, fetchFeatures, createRole, createRoleFeatures, fetchRoleFeatures, updateRole, deleteRoleFeatures } from 'src/store/apps/role/index.js'
 
 // ** Icons Imports
 import ContentCopy from 'mdi-material-ui/ContentCopy'
 import InformationOutline from 'mdi-material-ui/InformationOutline'
+import { EmailNewsletter } from 'mdi-material-ui'
 
 const cardData = [
   { totalUsers: 4, title: 'Administrator', avatars: ['1.png', '2.png', '3.png', '4.png'] },
@@ -56,9 +63,15 @@ const rolesArr = [
 ]
 
 const RolesCards = () => {
+
+  const dispatch = useDispatch()
   // ** States
   const [open, setOpen] = useState(false)
   const [dialogTitle, setDialogTitle] = useState('Add')
+  const [role, setRole] = useState([''])
+  const [features, setFeatures] = useState([''])
+  const [roleFeatures, setRoleFeatures] = useState()
+  const [formValues, setFormValues] = useState({})
 
   // ** Hooks
   const {
@@ -69,17 +82,66 @@ const RolesCards = () => {
   } = useForm({ defaultValues: { name: '' } })
   const handleClickOpen = () => setOpen(true)
 
-  const handleClose = () => {
-    setOpen(false)
-    setValue('name', '')
+  const handleCheckBox = (e) => {
+    setFormValues((prevstate) => ({ ...prevstate, [e.target.name]: e.target.checked }))
   }
 
+  const handleChange = (e) => {
+    setFormValues((prevstate) => ({ ...prevstate, [e.target.name]: e.target.value }))
+  }
+
+  const handleClose = () => {
+    setOpen(false)
+    setFormValues('')
+  }
+
+  const submit = async () => {
+    if (formValues.roleName == '') { toast.error('Role name cannot be empty'); return }
+    let check = await dispatch(fetchRole({ name: formValues.roleName }))
+    if (check.payload.length > 0) { toast.error('Role name already exists'); return }
+    let role = await dispatch(createRole({ name: formValues.roleName }))
+
+    for (let i in formValues) {
+      if (i == "roleName") continue;
+      let data = {}
+      if (formValues[i] == true) {
+        data.roleId = role.payload.id
+        data.featureName = i
+        let feature = await dispatch(createRoleFeatures(data))
+      }
+    }
+    toast.success('Role created and features added')
+    handleClose()
+  }
+
+  const edit = async () => {
+    console.log(formValues)
+    let role = await dispatch(updateRole({ id: formValues.roleId, name: formValues.roleName }))
+    let res = await dispatch(deleteRoleFeatures({ roleId: formValues.roleId }))
+    let id = formValues.roleId
+    for (let i in formValues) {
+      if (i == "roleName" || i == "roleId") continue;
+      let data = {}
+      if (formValues[i] == true) {
+        data.roleId = id
+        data.featureName = i
+        let feature = await dispatch(createRoleFeatures(data))
+      }
+    }
+    toast.success('Role & Features updated')
+    handleClose()
+  }
+
+  useEffect(() => {
+    dispatch(fetchRole()).then((data) => { if (data.payload && data.payload.length > 0) { setRole(data.payload) } })
+    dispatch(fetchFeatures()).then((data) => { if (data.payload && data.payload.length > 0) { setFeatures(data.payload) } })
+  }, [open])
   const renderCards = () =>
-    cardData.map((item, index) => (
+    role.map((item, index) => (
       <Grid item xs={12} sm={6} lg={4} key={index}>
         <Card>
           <CardContent>
-            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant='body2'>Total {item.totalUsers} users</Typography>
               <AvatarGroup
                 max={4}
@@ -92,31 +154,52 @@ const RolesCards = () => {
                   <Avatar key={index} alt={item.title} src={`/images/avatars/${img}`} />
                 ))}
               </AvatarGroup>
-            </Box>
+            </Box> */}
             <Box>
-              <Typography variant='h6'>{item.title}</Typography>
+              <Typography variant='h6'>{item.name}</Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography
                 variant='body2'
                 sx={{ color: 'primary.main', cursor: 'pointer' }}
-                onClick={() => {
+                onClick={async () => {
+                  let filter = {
+                    roleId: item.id
+                  }
+                  let rf = await dispatch(fetchRoleFeatures(filter))
+                  let data = {}
+                  for (let i in features) {
+                    let add = 0
+                    for (let k in rf.payload) {
+                      if (features[i].name == rf.payload[k].featureName) {
+                        add = 1
+                      }
+                    }
+                    if (add == 1) {
+                      data[features[i].name] = true
+                    }
+                    else {
+                      data[features[i].name] = false
+                    }
+                  }
+                  data.roleName = item.name
+                  data.roleId = item.id
+                  setFormValues(data)
                   handleClickOpen()
                   setDialogTitle('Edit')
                 }}
               >
                 Edit Role
               </Typography>
-              <IconButton size='small' sx={{ color: 'text.primary' }}>
+              {/* <IconButton size='small' sx={{ color: 'text.primary' }}>
                 <ContentCopy fontSize='small' />
-              </IconButton>
+              </IconButton> */}
             </Box>
           </CardContent>
         </Card>
       </Grid>
     ))
   const onSubmit = () => handleClose()
-
   return (
     <Grid container spacing={6} className='match-height'>
       {renderCards()}
@@ -124,6 +207,12 @@ const RolesCards = () => {
         <Card
           sx={{ cursor: 'pointer' }}
           onClick={() => {
+            let data = {}
+            data.roleName = ''
+            for (let i in features) {
+              data[`${features[i].name}`] = false
+            }
+            setFormValues(data)
             handleClickOpen()
             setDialogTitle('Add')
           }}
@@ -155,7 +244,8 @@ const RolesCards = () => {
         </Card>
       </Grid>
       <Dialog fullWidth maxWidth='md' scroll='body' onClose={handleClose} open={open}>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        {/* <form onSubmit={handleSubmit(onSubmit)}> */}
+        <form>
           <DialogTitle sx={{ textAlign: 'center' }}>
             <Typography variant='h4' component='span'>
               {`${dialogTitle} Role`}
@@ -165,20 +255,16 @@ const RolesCards = () => {
           <DialogContent sx={{ p: { xs: 6, sm: 12 } }}>
             <Box sx={{ my: 4 }}>
               <FormControl fullWidth>
-                <Controller
-                  name='name'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field: { value, onChange } }) => (
-                    <TextField
-                      value={value}
-                      label='Role Name'
-                      onChange={onChange}
-                      error={Boolean(errors.name)}
-                      placeholder='Enter Role Name'
-                    />
-                  )}
+
+                <TextField
+                  name="roleName"
+                  value={formValues.roleName != "undefined" ? formValues.roleName : ''}
+                  label='Role Name'
+                  onChange={handleChange}
+                  error={Boolean(errors.name)}
+                  placeholder='Enter Role Name'
                 />
+
                 {errors.name && (
                   <FormHelperText sx={{ color: 'error.main' }}>Please enter a valid role name</FormHelperText>
                 )}
@@ -187,7 +273,7 @@ const RolesCards = () => {
             <Typography variant='h6'>Role Permissions</Typography>
             <TableContainer>
               <Table size='small'>
-                <TableHead>
+                {/* <TableHead>
                   <TableRow>
                     <TableCell sx={{ pl: '0 !important' }}>
                       <Box
@@ -212,22 +298,16 @@ const RolesCards = () => {
                       />
                     </TableCell>
                   </TableRow>
-                </TableHead>
+                </TableHead> */}
                 <TableBody>
-                  {rolesArr.map((i, index) => {
+                  {features.map((i, index) => {
                     return (
                       <TableRow key={index} sx={{ '& .MuiTableCell-root:first-of-type': { pl: 0 } }}>
-                        <TableCell sx={{ fontWeight: 600, color: theme => `${theme.palette.text.primary} !important` }}>
+                        {/* <TableCell sx={{ fontWeight: 600, color: theme => `${theme.palette.text.primary} !important` }}>
                           {i}
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell>
-                          <FormControlLabel control={<Checkbox size='small' />} label='Read' />
-                        </TableCell>
-                        <TableCell>
-                          <FormControlLabel control={<Checkbox size='small' />} label='Write' />
-                        </TableCell>
-                        <TableCell>
-                          <FormControlLabel control={<Checkbox size='small' />} label='Create' />
+                          <FormControlLabel control={<Checkbox name={i.name} onChange={handleCheckBox} checked={formValues[`${i.name}`]} size='small' />} label={i.name} />
                         </TableCell>
                       </TableRow>
                     )
@@ -238,9 +318,20 @@ const RolesCards = () => {
           </DialogContent>
           <DialogActions sx={{ pt: 0, display: 'flex', justifyContent: 'center' }}>
             <Box className='demo-space-x'>
-              <Button size='large' type='submit' variant='contained'>
-                Submit
-              </Button>
+              {
+                dialogTitle == 'Edit' ?
+                  <>
+                    <Button size='large' onClick={edit} variant='contained'>
+                      Submit
+                    </Button>
+                  </>
+                  :
+                  <>
+                    <Button size='large' onClick={submit} variant='contained'>
+                      Submit
+                    </Button>
+                  </>
+              }
               <Button size='large' color='secondary' variant='outlined' onClick={handleClose}>
                 Discard
               </Button>
