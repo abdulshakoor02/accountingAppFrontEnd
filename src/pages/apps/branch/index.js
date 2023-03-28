@@ -25,6 +25,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 // ** Icons Imports
 import PencilOutline from 'mdi-material-ui/PencilOutline'
 import DeleteOutline from 'mdi-material-ui/DeleteOutline'
+import uuid from 'react-uuid'
 
 // ** Third Party Imports
 import { useForm, Controller } from 'react-hook-form'
@@ -39,9 +40,9 @@ import BranchHeader from 'src/views/apps/branch/BranchHeader'
 
 // ** Actions Imports
 import { fetchData } from 'src/store/apps/permissions'
-import { fetchRegion } from 'src/store/apps/region/index.js'
-import { fetchBranch } from 'src/store/apps/branch/index.js'
-import { updateBranch } from './../../../store/apps/branch/index'
+import { fetchGeneric } from 'src/store/apps/generic/index.js'
+
+import axios from 'src/store/axios'
 
 const colors = {
   support: 'info',
@@ -56,6 +57,8 @@ const Branch = props => {
   const [value, setValue] = useState('')
   const [formValue, setformValue] = useState({})
   const [page, setPage] = useState(0)
+  const [count, setCount] = useState(0)
+  const [rows, setRows] = useState([])
   const [total, setTotal] = useState(0)
   const [sortColumn, setSortColumn] = useState('')
   const [sort, setSort] = useState('asc')
@@ -65,8 +68,6 @@ const Branch = props => {
   // ** Hooks
   console.log(props)
   const dispatch = useDispatch()
-  const { rows, count } = useSelector(state => state.branch)
-  const { rows: region, count: regionTotal } = useSelector(state => state.region)
 
   const defaultColumns = [
     {
@@ -75,13 +76,6 @@ const Branch = props => {
       minWidth: 240,
       headerName: 'Name',
       renderCell: ({ row }) => <Typography>{row.name}</Typography>
-    },
-    {
-      flex: 0.25,
-      field: 'region',
-      minWidth: 240,
-      headerName: 'Region',
-      renderCell: ({ row }) => <Typography>{row.region.name}</Typography>
     },
     {
       flex: 0.25,
@@ -97,37 +91,33 @@ const Branch = props => {
       headerName: 'Email',
       renderCell: ({ row }) => <Typography>{row.email}</Typography>
     },
-    {
-      flex: 0.25,
-      minWidth: 215,
-      field: 'createdDate',
-      headerName: 'Created Date',
-      renderCell: ({ row }) => <Typography>{row.createdAt}</Typography>
-    }
   ]
 
   const fetchTableData = async (sort, column) => {
     let q = {}
     if (value == '') {
       q = {
-        offset: page * pageSize,
-        limit: pageSize
+        data: {},
+        skip: page * pageSize,
+        limit: pageSize,
+        collection: 'branch'
       }
     } else {
       q = {
-        where: {
-          name: value
-        },
-        offset: page * pageSize,
-        limit: pageSize
+        data: {},
+        skip: page * pageSize,
+        limit: pageSize,
+        collection: 'branch'
       }
     }
-    let data = await dispatch(fetchBranch(q))
+    let data = await dispatch(fetchGeneric(q))
+    console.log(data)
+    setRows(data.payload.data)
+    setCount(data.payload.count)
   }
 
   useEffect(() => {
     fetchTableData(sort, sortColumn)
-    dispatch(fetchRegion({}))
   }, [value, page, pageSize])
 
   const handleFilter = useCallback(val => {
@@ -206,11 +196,12 @@ const Branch = props => {
           <Card>
             <BranchHeader value={value} handleFilter={handleFilter} />
 
-             {/* onSortModelChange={handleSortModel} */}
+            {/* onSortModelChange={handleSortModel} */}
 
             <DataGrid
               autoHeight
               pagination
+              getRowId={() => uuid()}
               rowCount={count}
               rows={rows}
               columns={columns}
@@ -241,23 +232,7 @@ const Branch = props => {
                 placeholder='Enter Branch Name'
                 sx={{ mr: [0, 4], mb: 3 }}
               />
-              <TextField
-                select
-                name='region'
-                value={formValue?.region}
-                onChange={handleChange}
-                label='Region'
-                sx={{ mr: [0, 4], mb: 3 }}
-                required
-              >
-                {region.map((e, key) => {
-                  return (
-                    <MenuItem key={key + e.id} value={e.id}>
-                      {e.name}
-                    </MenuItem>
-                  )
-                })}
-              </TextField>
+
               <TextField
                 name='address'
                 multiline={true}

@@ -16,7 +16,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import FormHelperText from '@mui/material/FormHelperText'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import { fetchBranch, createBranch } from 'src/store/apps/branch/index.js'
+import { fetchGeneric, createGeneric } from 'src/store/apps/generic/index.js'
 import { fetchRegion } from 'src/store/apps/region/index.js'
 
 import toast from 'react-hot-toast'
@@ -32,14 +32,14 @@ const BranchHeader = props => {
 
   // ** State
   const [open, setOpen] = useState(false)
+
   const [formValues, setFormValues] = useState({
     branch: ''
   })
-  useEffect(() => {
-    dispatch(fetchRegion({}))
-  }, [])
+
+
   // ** Hooks
-  const { rows: region, count: regionTotal } = useSelector(state => state.region)
+  // const { rows: region, count: regionTotal } = useSelector(state => state.region)
 
   const handleDialogToggle = () => {
     setOpen(!open)
@@ -53,8 +53,6 @@ const BranchHeader = props => {
     if (
       formValues.branch == '' ||
       typeof formValues.branch == 'undefined' ||
-      formValues.region == '' ||
-      typeof formValues.region == 'undefined' ||
       formValues.address == '' ||
       typeof formValues.address == 'undefined' ||
       formValues.url == '' ||
@@ -65,19 +63,21 @@ const BranchHeader = props => {
       typeof formValues.mobile == 'undefined'
     ) {
       toast.error('All fields are mandatory')
+
       return
     }
     await dispatch(
-      createBranch({
-        name: formValues.branch,
-        regionId: formValues.region,
-        address: formValues.address,
-        url: formValues.url,
-        email: formValues.email,
-        mobile: formValues.mobile
+      createGeneric({
+        data: {
+          name: formValues.branch,
+          address: formValues.address,
+          url: formValues.url,
+          email: formValues.email,
+          mobile: formValues.mobile
+        }, collection: 'branch'
       })
     )
-    dispatch(fetchBranch({}))
+    dispatch(fetchGeneric({ data: {}, collection: 'branch' }))
     toast.success('Branch Created')
     setOpen(false)
   }
@@ -116,23 +116,6 @@ const BranchHeader = props => {
                 placeholder='Enter Branch Name'
                 sx={{ mr: [0, 4], mb: 3 }}
               />
-              <TextField
-                select
-                name='region'
-                value={formValues?.region}
-                onChange={handleChange}
-                label='Region'
-                sx={{ mr: [0, 4], mb: 3 }}
-                required
-              >
-                {region.map((e, key) => {
-                  return (
-                    <MenuItem key={key + e.id} value={e.id}>
-                      {e.name}
-                    </MenuItem>
-                  )
-                })}
-              </TextField>
               <TextField
                 name='address'
                 multiline={true}
