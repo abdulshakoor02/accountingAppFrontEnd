@@ -35,41 +35,23 @@ import toast from 'react-hot-toast'
 // ** Third Party Imports
 import { useForm, Controller } from 'react-hook-form'
 
-import { fetchRole, fetchFeatures, createRole, createRoleFeatures, fetchRoleFeatures, updateRole, deleteRoleFeatures } from 'src/store/apps/role/index.js'
+import { fetchGeneric, createGeneric } from 'src/store/apps/generic/index.js'
 
 // ** Icons Imports
 import ContentCopy from 'mdi-material-ui/ContentCopy'
 import InformationOutline from 'mdi-material-ui/InformationOutline'
 import { EmailNewsletter } from 'mdi-material-ui'
 
-const cardData = [
-  { totalUsers: 4, title: 'Administrator', avatars: ['1.png', '2.png', '3.png', '4.png'] },
-  { totalUsers: 7, title: 'Manager', avatars: ['5.png', '6.png', '7.png', '8.png', '1.png', '2.png', '3.png'] },
-  { totalUsers: 5, title: 'Users', avatars: ['4.png', '5.png', '6.png', '7.png', '8.png'] },
-  { totalUsers: 3, title: 'Support', avatars: ['1.png', '2.png', '3.png'] },
-  { totalUsers: 2, title: 'Restricted User', avatars: ['4.png', '5.png'] }
-]
-
-const rolesArr = [
-  'User Management',
-  'Content Management',
-  'Disputes Management',
-  'Database Management',
-  'Financial Management',
-  'Reporting',
-  'API Control',
-  'Repository Management',
-  'Payroll'
-]
 
 const RolesCards = () => {
 
   const dispatch = useDispatch()
   // ** States
+
   const [open, setOpen] = useState(false)
   const [dialogTitle, setDialogTitle] = useState('Add')
-  const [role, setRole] = useState([''])
-  const [features, setFeatures] = useState([''])
+  const [role, setRole] = useState([])
+  const [features, setFeatures] = useState([])
   const [roleFeatures, setRoleFeatures] = useState()
   const [formValues, setFormValues] = useState({})
 
@@ -133,9 +115,10 @@ const RolesCards = () => {
   }
 
   useEffect(() => {
-    dispatch(fetchRole()).then((data) => { if (data.payload && data.payload.length > 0) { setRole(data.payload) } })
-    dispatch(fetchFeatures()).then((data) => { if (data.payload && data.payload.length > 0) { setFeatures(data.payload) } })
+    dispatch(fetchGeneric({ data: {}, skip: 0, limit: 1000, collection: 'roles' })).then((data) => { if (data.payload.data && data.payload.data.length > 0) { setRole(data.payload.data) } })
+    dispatch(fetchGeneric({ data: {}, skip: 0, limit: 1000, collection: 'features' })).then((data) => { console.log(data); if (data.payload.data && data.payload.data.length > 0) { setFeatures(data.payload.data) } })
   }, [open])
+
   const renderCards = () =>
     role.map((item, index) => (
       <Grid item xs={12} sm={6} lg={4} key={index}>
@@ -200,6 +183,7 @@ const RolesCards = () => {
       </Grid>
     ))
   const onSubmit = () => handleClose()
+
   return (
     <Grid container spacing={6} className='match-height'>
       {renderCards()}
